@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android自动化测试报告</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #8B5CF6, #EC4899); color: white; padding: 2rem; text-align: center; }
+        .header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        .header p { opacity: 0.9; }
+        .container { max-width: 900px; margin: -3rem auto 2rem; padding: 0 1rem; position: relative; z-index: 1; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 2rem; margin-bottom: 1.5rem; }
+        .card-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; color: #1f2937; }
+        .status-badge { display: inline-block; padding: 0.375rem 1rem; border-radius: 20px; font-size: 0.875rem; font-weight: 600; }
+        .status-passed { background: #d1fae5; color: #065f46; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+        .test-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .info-item { background: #f9fafb; padding: 1rem; border-radius: 8px; }
+        .info-label { font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem; }
+        .info-value { font-size: 1rem; font-weight: 600; color: #1f2937; }
+        .steps-list { list-style: none; }
+        .step-item { padding: 1rem; border-left: 3px solid #8B5CF6; margin-bottom: 1rem; background: #f9fafb; border-radius: 0 8px 8px 0; }
+        .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .step-number { background: #8B5CF6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 600; }
+        .step-action { font-weight: 600; color: #1f2937; }
+        .step-desc { color: #6b7280; font-size: 0.9rem; }
+        .step-expected { color: #8B5CF6; font-size: 0.875rem; margin-top: 0.5rem; }
+        .summary { text-align: center; padding: 1.5rem; background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(236,72,153,0.1)); border-radius: 12px; }
+        .summary-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .summary-text { font-size: 1.1rem; color: #374151; }
+        .footer { text-align: center; padding: 2rem; color: #6b7280; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📱 Android自动化测试报告</h1>
+        <p>鹿客管家APP事件页面测试</p>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <div class="card-title">测试概览</div>
+            <div class="test-info">
+                <div class="info-item">
+                    <div class="info-label">测试名称</div>
+                    <div class="info-value">鹿客管家APP事件页面测试</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">应用包名</div>
+                    <div class="info-value">com.lockin.loock</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">测试状态</div>
+                    <div class="info-value"><span class="status-badge status-passed">✅ 通过</span></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">执行时间</div>
+                    <div class="info-value">12.70s</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">测试步骤</div>
+            <ul class="steps-list">
+                <li class="step-item">
+                    <div class="step-header">
+                        <span class="step-number">1</span>
+                        <span class="step-action">启动应用</span>
+                    </div>
+                    <div class="step-desc">启动鹿客管家APP</div>
+                    <div class="step-expected">✓ 应用成功启动，显示首页</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-header">
+                        <span class="step-number">2</span>
+                        <span class="step-action">点击底部事件tab</span>
+                    </div>
+                    <div class="step-desc">点击底部导航栏的事件tab</div>
+                    <div class="step-expected">✓ 进入事件页面</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-header">
+                        <span class="step-number">3</span>
+                        <span class="step-action">点击美好时光</span>
+                    </div>
+                    <div class="step-desc">在事件页面点击美好时光入口</div>
+                    <div class="step-expected">✓ 进入美好时光详情页</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-header">
+                        <span class="step-number">4</span>
+                        <span class="step-action">验证页面</span>
+                    </div>
+                    <div class="step-desc">验证美好时光详情页已正确显示</div>
+                    <div class="step-expected">✓ 美好时光详情页标题显示正确</div>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <div class="summary">
+                <div class="summary-icon">🎉</div>
+                <div class="summary-text">所有测试用例均已通过！</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>测试时间：2026-05-15 | UIAutomator2 MCP Server</p>
+    </div>
+</body>
+</html>
