@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python.exe -m pip install paddlepaddle)",
+      "Bash(.venv/Scripts/python.exe --version)",
+      "Bash(uv pip:*)",
+      "Bash(.venv/Scripts/python.exe -c \"from paddleocr import PaddleOCR; help\\(PaddleOCR.__init__\\)\" 2>&1 | head -30)",
+      "Bash(.venv/Scripts/python.exe -c \"import mcp_android; print\\(mcp_android.__version__\\)\")",
+      "Bash(.venv/Scripts/python.exe tests/test_init.py)",
+      "Bash(adb devices:*)"
+    ]
+  }
+}

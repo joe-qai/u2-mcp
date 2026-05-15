@@ -1,128 +1,107 @@
 # UIAutomator2 MCP Server
 
-基于FastMCP框架实现的UIAutomator2 MCP服务器,提供Android设备自动化控制能力。
+基于 FastMCP 框架实现的 UIAutomator2 MCP 服务器，提供 Android 设备自动化控制与 OCR 文本识别能力。
 
 ## 功能特性
 
-- Android设备管理
-  - ADB命令执行
-  - 应用包管理
-  - 屏幕截图
-
-- UI自动化操作
-  - 元素点击
-  - 文本输入
-  - 屏幕滑动
-  - 元素等待
-  - 页面滚动
-
-- 应用管理
-  - 应用启动/停止
-  - 当前应用信息
-  - UIAutomator2服务管理
+- **设备管理** — ADB 命令执行、应用包列表、屏幕截图
+- **UI 自动化** — 元素点击、文本输入、屏幕滑动、等待点击、页面滚动
+- **应用管理** — 应用启动/停止、当前应用信息、UIAutomator2 服务管理
+- **OCR 识别** — 屏幕文字识别（PaddleOCR）、文本定位与点击
 
 ## 环境要求
 
-- Python 3.10+
-- ADB工具
-- Android设备或模拟器
+- Python 3.10+（推荐 3.11，PaddlePaddle 兼容性最佳）
+- ADB 工具（已加入系统 PATH）
+- Android 设备或模拟器（已通过 ADB 连接）
 
-## 安装
+## 安装与配置
 
-1. 克隆项目
+### 方式一：本地 Python 环境
+
+适合已有全局 Python 环境、不希望使用虚拟环境的场景。
+
 ```bash
+# 1. 克隆项目
 git clone https://github.com/yourusername/uiautomator2-mcp.git
 cd uiautomator2-mcp
-```
 
-2. 安装依赖
-```bash
+# 2. 安装依赖
 pip install -e .
 ```
 
-## MCP配置
+Agent 配置（`mcp.json`）：
 
-### 1. 配置mcp.json
-
-在Claude Desktop的配置目录下创建或编辑`mcp.json`文件（通常在`~/.cursor/mcp.json`或`%APPDATA%\Cursor\mcp.json`）：
-
-```json
-{
-  "mcpServers": {
-    "android": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/path/to/uiautomator2-mcp",  // 替换为你的项目路径
-        "run",
-        "src/server.py"
-      ]
-    }
-  }
-}
-```
-
-配置说明：
-- `android`: MCP服务器的唯一标识符
-- `command`: 用于运行Python的命令（这里使用uv，也可以使用python）
-- `args`: 命令行参数
-  - `--directory`: 项目目录路径
-  - `run`: uv的运行命令
-  - `src/server.py`: 服务器入口文件路径
-
-### 2. 配置选项
-
-你可以根据需要调整以下配置：
-
-1. 使用Python直接运行：
 ```json
 {
   "mcpServers": {
     "android": {
       "command": "python",
-      "args": [
-        "/path/to/uiautomator2-mcp/src/server.py"
-      ]
+      "args": ["src/server.py"]
     }
   }
 }
 ```
 
-2. 使用虚拟环境：
-```json
-{
-  "mcpServers": {
-    "android": {
-      "command": "/path/to/venv/bin/python",
-      "args": [
-        "/path/to/uiautomator2-mcp/src/server.py"
-      ]
-    }
-  }
-}
-```
+> **注意**：此方式依赖全局 Python 环境，需确保 `PYTHONPATH` 包含项目根目录。如遇模块导入问题，可在配置中添加 `env`：
 
-3. 添加环境变量：
 ```json
 {
   "mcpServers": {
     "android": {
       "command": "python",
-      "args": [
-        "/path/to/uiautomator2-mcp/src/server.py"
-      ],
+      "args": ["src/server.py"],
       "env": {
-        "PYTHONPATH": "/path/to/uiautomator2-mcp",
-        "ANDROID_HOME": "/path/to/android-sdk"
+        "PYTHONPATH": "/path/to/uiautomator2-mcp"
       }
     }
   }
 }
 ```
 
-### 3. 多服务器配置
+### 方式二：uv 虚拟环境
 
-你可以在同一配置文件中定义多个MCP服务器：
+适合希望项目依赖隔离、使用 uv 管理环境的场景。
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/yourusername/uiautomator2-mcp.git
+cd uiautomator2-mcp
+
+# 2. 用 uv 创建虚拟环境并安装依赖
+uv venv --python 3.11
+uv pip install -e .
+```
+
+Agent 配置（`mcp.json`）：
+
+```json
+{
+  "mcpServers": {
+    "android": {
+      "command": ".venv/Scripts/python.exe",
+      "args": ["src/server.py"]
+    }
+  }
+}
+```
+
+Linux/macOS 下 venv Python 路径为 `.venv/bin/python`：
+
+```json
+{
+  "mcpServers": {
+    "android": {
+      "command": ".venv/bin/python",
+      "args": ["src/server.py"]
+    }
+  }
+}
+```
+
+### 方式三：uv --directory 自动管理（推荐）
+
+最简配置，uv 自动在指定目录下创建并管理虚拟环境，无需手动安装。
 
 ```json
 {
@@ -135,55 +114,59 @@ pip install -e .
         "run",
         "src/server.py"
       ]
-    },
-    "android-debug": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/path/to/uiautomator2-mcp",
-        "run",
-        "src/server.py",
-        "--debug"
-      ]
     }
   }
 }
 ```
 
-## 使用工具
+> 将 `/path/to/uiautomator2-mcp` 替换为项目的实际绝对路径。
 
-配置完成后，你可以在Claude中直接使用所有可用的工具：
+## MCP 配置文件位置
 
-```python
-# 初始化UIAutomator2
-await mcp.call_tool("mcp_android_init_uiautomator2", {})
+| 客户端              | 配置文件路径                      |
+| ---------------- | --------------------------- |
+| Claude Desktop   | `~/.claude/mcp.json`        |
+| Cursor (macOS)   | `~/.cursor/mcp.json`        |
+| Cursor (Windows) | `%APPDATA%\Cursor\mcp.json` |
 
-# 启动应用
-await mcp.call_tool("mcp_android_start_app", {
-    "package_name": "com.example.app"
-})
+## 可用工具
 
-# 点击元素
-await mcp.call_tool("mcp_android_click_element", {
-    "text": "登录"
-})
-```
+| 工具名                    | 说明                                              |
+| ---------------------- | ----------------------------------------------- |
+| `ADB_shell`            | 执行 ADB shell 命令                                 |
+| `get_packages`         | 获取已安装应用包列表                                      |
+| `get_screenshot`       | 获取屏幕截图                                          |
+| `click_element`        | 点击界面元素（支持 text/description/resourceId/xpath 定位） |
+| `input_text`           | 输入文本                                            |
+| `swipe_screen`         | 滑动屏幕（up/down/left/right）                        |
+| `wait_and_click`       | 等待元素出现并点击                                       |
+| `scroll_to_element`    | 滚动到指定元素                                         |
+| `start_app`            | 启动应用                                            |
+| `stop_app`             | 停止应用                                            |
+| `get_current_app`      | 获取当前运行的应用信息                                     |
+| `UIAutomator2`         | 初始化 UIAutomator2 服务                             |
+| `check_uiautomator2`   | 检查 UIAutomator2 服务状态                            |
+| `restart_uiautomator2` | 重启 UIAutomator2 服务                              |
+| `OCR`                  | 屏幕 OCR 文字识别                                     |
+| `find_text`            | 查找文本位置坐标                                        |
+| `click_text`           | 点击指定文本                                          |
+| `click_position`       | 点击指定坐标                                          |
 
 ## 开发
 
-1. 安装开发依赖
 ```bash
+# 安装开发依赖
 pip install -e ".[dev]"
-```
 
-2. 运行测试
-```bash
+# 运行测试（需连接 Android 设备）
 pytest
+
+# 代码格式化
+black src/ tests/
+
+# 代码检查
+ruff check src/ tests/
 ```
-
-## 贡献
-
-欢迎提交Issue和Pull Request。
 
 ## 许可证
 
