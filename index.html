@@ -172,19 +172,19 @@ python src/server.py</pre>
 <span class="code-comment"># 初始化设备连接</span>
 mcp.init_uiautomator2()
 
-<span class="code-comment"># 启动应用</span>
-mcp.start_app(<span class="code-string">"com.example.app"</span>)
+<span class="code-comment"># 启动小红书APP</span>
+mcp.start_app(<span class="code-string">"com.xingin.xhs"</span>)
 
-<span class="code-comment"># 点击元素</span>
-mcp.click_element(resourceId=<span class="code-string">"com.example.app:id/login"</span>)
+<span class="code-comment"># 点击搜索图标</span>
+mcp.click_element(resourceId=<span class="code-string">"com.xingin.xhs:id/search"</span>)
 
-<span class="code-comment"># 输入文本</span>
-mcp.input_text(<span class="code-string">"username@example.com"</span>)
+<span class="code-comment"># 输入搜索关键词</span>
+mcp.input_text(<span class="code-string">"美食教程"</span>)
 
-<span class="code-comment"># 获取截图</span>
+<span class="code-comment"># 获取屏幕截图</span>
 screenshot = mcp.get_screenshot()
 
-<span class="code-comment"># OCR识别</span>
+<span class="code-comment"># OCR识别屏幕内容</span>
 result = mcp.ocr_screen()</pre>
             </div>
         </div>
@@ -192,10 +192,11 @@ result = mcp.ocr_screen()</pre>
             <div class="code-header"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>自然语言指令示例</span></div>
             <div class="code-content">
                 <pre><span class="code-comment"># 自然语言指令示例</span>
-<span class="code-comment"># 1. 打开鹿客管家APP，点击底部事件tab，进入美好时光详情页</span>
-<span class="code-comment"># 2. 在设置页面找到关于我们选项并点击</span>
-<span class="code-comment"># 3. 滑动页面找到登录按钮并点击</span>
-<span class="code-comment"># 4. 识别屏幕上的验证码并输入</span></pre>
+<span class="code-comment"># 1. 打开小红书APP，点击搜索框，输入"旅行攻略"进行搜索</span>
+<span class="code-comment"># 2. 打开抖音APP，点击底部"发现"tab，下滑浏览视频内容</span>
+<span class="code-comment"># 3. 在微信APP中点击"我"，进入设置页面找到隐私选项</span>
+<span class="code-comment"># 4. 在淘宝APP搜索框输入"手机"，点击第一个商品进入详情页</span>
+<span class="code-comment"># 5. 打开支付宝，点击首页搜索框，搜索"健康码"</span></pre>
             </div>
         </div>
     </section>
