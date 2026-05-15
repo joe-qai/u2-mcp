@@ -21,7 +21,7 @@ from mcp_android import (
 )
 
 # 指定设备序列号（多设备时必填，从 adb devices 获取）
-DEVICE_SERIAL = "a9caaa0e"
+DEVICE_SERIAL = ""
 
 
 def test_device_initialization():

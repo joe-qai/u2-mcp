@@ -48,9 +48,8 @@ class OCRManager:
         if self._ocr is None:
             # 初始化PaddleOCR，使用中英文模型
             self._ocr = PaddleOCR(
-                use_angle_cls=True,
-                lang="ch",
-                show_log=False
+                use_textline_orientation=True,
+                lang="ch"
             )
 
     def ocr_screen(self) -> str:

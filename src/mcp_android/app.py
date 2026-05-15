@@ -84,7 +84,7 @@ def init_uiautomator2(serial: Optional[str] = None) -> str:
         # 检查服务是否正常运行
         try:
             device.info
-            return f"✅ UIAutomator2初始化成功\n设备序列号: {device_serial}"
+            return f"✅ UIAutomator2初始化successfully\n设备序列号: {device_serial}"
         except Exception:
             return "❌ UIAutomator服务启动失败，请检查设备状态"
 
