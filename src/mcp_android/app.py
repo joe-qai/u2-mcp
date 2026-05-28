@@ -9,7 +9,10 @@ from typing import Tuple, Optional, Dict, Any
 import time
 import subprocess
 import os
+import logging
 from .android import set_device, get_device
+
+logger = logging.getLogger(__name__)
 
 
 def init_uiautomator2(serial: Optional[str] = None) -> str:
@@ -65,16 +68,35 @@ def init_uiautomator2(serial: Optional[str] = None) -> str:
         # 设置全局设备对象
         set_device(device)
 
-        # 安装必要的APK（静默安装，忽略已安装错误）
+        # 获取项目根目录的 resources 路径
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        resources_dir = os.path.join(project_root, "resources")
+
+        # 安装必要的APK（优先使用本地 resources 目录，静默安装，忽略已安装错误）
         try:
-            device.app_install(
-                "https://github.com/openatx/android-uiautomator-server/releases/download/2.3.1/app-uiautomator.apk"
-            )
-            device.app_install(
-                "https://github.com/openatx/android-uiautomator-server/releases/download/2.3.1/app-uiautomator-test.apk"
-            )
-        except Exception:
-            pass  # 如果已经安装则忽略错误
+            # 优先从本地 resources 目录安装
+            local_apk = os.path.join(resources_dir, "app-uiautomator.apk")
+            local_test_apk = os.path.join(resources_dir, "app-uiautomator-test.apk")
+
+            if os.path.exists(local_apk):
+                device.app_install(local_apk)
+                logger.info(f"已从本地安装: {local_apk}")
+            else:
+                device.app_install(
+                    "https://github.com/openatx/android-uiautomator-server/releases/download/2.3.1/app-uiautomator.apk"
+                )
+                logger.info("已从GitHub下载安装: app-uiautomator.apk")
+
+            if os.path.exists(local_test_apk):
+                device.app_install(local_test_apk)
+                logger.info(f"已从本地安装: {local_test_apk}")
+            else:
+                device.app_install(
+                    "https://github.com/openatx/android-uiautomator-server/releases/download/2.3.1/app-uiautomator-test.apk"
+                )
+                logger.info("已从GitHub下载安装: app-uiautomator-test.apk")
+        except Exception as e:
+            logger.warning(f"APK安装过程出现警告（可能已安装）: {str(e)}")
 
         # 启动UIAutomator服务
         device.app_start("com.github.uiautomator")

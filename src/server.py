@@ -17,7 +17,7 @@ UIAutomator2 MCP Server - Android设备自动化服务
 import logging
 import sys
 from typing import Optional, Any, Dict, List
-from fastmcp import FastMCP, ToolInfo
+from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 # 配置日志
@@ -52,6 +52,49 @@ from mcp_android import (
     get_packages,
     get_device_info,
     OCRManager,
+    # 网络工具
+    toggle_wifi,
+    toggle_mobile_data,
+    toggle_airplane_mode,
+    get_wifi_info,
+    get_ip_address,
+    ping,
+    get_network_info,
+    # 文件管理
+    list_files,
+    push_file,
+    pull_file,
+    read_text_file,
+    download_file,
+    write_text_file,
+    delete_file,
+    create_directory,
+    get_file_info,
+    # 性能分析
+    get_battery_info,
+    get_memory_info,
+    get_cpu_info,
+    analyze_app_performance,
+    collect_device_logs,
+    get_app_memory_usage,
+    get_app_cpu_usage,
+    get_system_info,
+    # 录屏功能
+    record_screen,
+    take_screenshot_base64,
+    get_screen_resolution,
+    get_screen_density,
+    get_display_info,
+    # 元素发现
+    dump_ui_hierarchy,
+    get_all_elements,
+    find_elements_by_text,
+    find_elements_by_resource_id,
+    find_clickable_elements,
+    find_elements_by_class,
+    get_element_info_at_position,
+    get_element_suggestions,
+    search_elements,
 )
 
 # Pydantic模型定义
@@ -641,6 +684,528 @@ def mcp_ocr_screen_detailed() -> List[OCRResult]:
         logger.error(f"OCR详细识别异常: {str(e)}")
         return []
 
+# ==================== 网络工具 ====================
+
+@mcp.tool("toggle_wifi")
+def mcp_toggle_wifi(
+    enable: bool = Field(description="是否启用WiFi，True开启，False关闭")
+) -> str:
+    """打开或关闭WiFi"""
+    try:
+        result = toggle_wifi(enable)
+        logger.info(f"WiFi操作: {result}")
+        return result
+    except Exception as e:
+        error_msg = f"❌ WiFi操作失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("toggle_mobile_data")
+def mcp_toggle_mobile_data(
+    enable: bool = Field(description="是否启用移动数据，True开启，False关闭")
+) -> str:
+    """打开或关闭移动数据"""
+    try:
+        result = toggle_mobile_data(enable)
+        logger.info(f"移动数据操作: {result}")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 移动数据操作失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("toggle_airplane_mode")
+def mcp_toggle_airplane_mode(
+    enable: bool = Field(description="是否启用飞行模式，True开启，False关闭")
+) -> str:
+    """打开或关闭飞行模式"""
+    try:
+        result = toggle_airplane_mode(enable)
+        logger.info(f"飞行模式操作: {result}")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 飞行模式操作失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_wifi_info")
+def mcp_get_wifi_info() -> str:
+    """获取WiFi连接信息"""
+    try:
+        result = get_wifi_info()
+        logger.info("获取WiFi信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取WiFi信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_ip_address")
+def mcp_get_ip_address() -> str:
+    """获取设备IP地址"""
+    try:
+        result = get_ip_address()
+        logger.info("获取IP地址成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取IP地址失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("ping")
+def mcp_ping(
+    host: str = Field(description="要ping的主机地址"),
+    count: int = Field(4, description="ping的次数，默认4次")
+) -> str:
+    """Ping网络主机"""
+    try:
+        result = ping(host, count)
+        logger.info(f"Ping {host} 完成")
+        return result
+    except Exception as e:
+        error_msg = f"❌ Ping失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_network_info")
+def mcp_get_network_info() -> str:
+    """获取网络详细信息汇总"""
+    try:
+        result = get_network_info()
+        logger.info("获取网络信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取网络信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+# ==================== 文件管理工具 ====================
+
+@mcp.tool("list_files")
+def mcp_list_files(
+    dir_path: str = Field("/sdcard", description="要列出内容的目录路径，默认为/sdcard")
+) -> str:
+    """列出指定目录的文件和子目录"""
+    try:
+        result = list_files(dir_path)
+        logger.info(f"列出目录 {dir_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 列出文件失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("push_file")
+def mcp_push_file(
+    local_path: str = Field(description="本地文件路径"),
+    device_path: str = Field(description="设备上的目标路径")
+) -> str:
+    """将文件推送到设备"""
+    try:
+        result = push_file(local_path, device_path)
+        logger.info(f"推送文件 {local_path} 到 {device_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 推送文件失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("pull_file")
+def mcp_pull_file(
+    device_path: str = Field(description="设备上的文件路径"),
+    local_path: str = Field(description="本地保存路径")
+) -> str:
+    """从设备拉取文件"""
+    try:
+        result = pull_file(device_path, local_path)
+        logger.info(f"拉取文件 {device_path} 到 {local_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 拉取文件失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("read_text_file")
+def mcp_read_text_file(
+    device_path: str = Field(description="设备上的文件路径")
+) -> str:
+    """读取设备上的文本文件"""
+    try:
+        result = read_text_file(device_path)
+        logger.info(f"读取文件 {device_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 读取文件失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("download_file")
+def mcp_download_file(
+    device_path: str = Field(description="设备上的文件路径")
+) -> str:
+    """下载设备上的文件并转换为base64"""
+    try:
+        result = download_file(device_path)
+        logger.info(f"下载文件 {device_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 下载文件失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("write_text_file")
+def mcp_write_text_file(
+    device_path: str = Field(description="设备上的文件路径"),
+    content: str = Field(description="要写入的文本内容")
+) -> str:
+    """在设备上创建或覆盖文本文件"""
+    try:
+        result = write_text_file(device_path, content)
+        logger.info(f"写入文件 {device_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 写入文件失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("delete_file")
+def mcp_delete_file(
+    device_path: str = Field(description="设备上的文件或目录路径")
+) -> str:
+    """删除设备上的文件或目录"""
+    try:
+        result = delete_file(device_path)
+        logger.info(f"删除 {device_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 删除失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("create_directory")
+def mcp_create_directory(
+    dir_path: str = Field(description="要创建的目录路径")
+) -> str:
+    """在设备上创建目录"""
+    try:
+        result = create_directory(dir_path)
+        logger.info(f"创建目录 {dir_path} 成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 创建目录失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_file_info")
+def mcp_get_file_info(
+    file_path: str = Field(description="文件路径")
+) -> str:
+    """获取文件详细信息"""
+    try:
+        result = get_file_info(file_path)
+        logger.info(f"获取文件 {file_path} 信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取文件信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+# ==================== 性能分析工具 ====================
+
+@mcp.tool("get_battery_info")
+def mcp_get_battery_info() -> str:
+    """获取电池信息"""
+    try:
+        result = get_battery_info()
+        logger.info("获取电池信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取电池信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_memory_info")
+def mcp_get_memory_info() -> str:
+    """获取内存信息"""
+    try:
+        result = get_memory_info()
+        logger.info("获取内存信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取内存信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_cpu_info")
+def mcp_get_cpu_info() -> str:
+    """获取CPU信息"""
+    try:
+        result = get_cpu_info()
+        logger.info("获取CPU信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取CPU信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("analyze_app_performance")
+def mcp_analyze_app_performance(
+    package_name: str = Field(description="应用包名"),
+    duration: int = Field(10, description="分析时长（秒），默认10秒")
+) -> str:
+    """分析应用性能"""
+    try:
+        result = analyze_app_performance(package_name, duration)
+        logger.info(f"分析应用 {package_name} 性能完成")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 分析应用性能失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("collect_device_logs")
+def mcp_collect_device_logs(
+    duration: int = Field(10, description="收集日志的时长（秒），默认10秒")
+) -> str:
+    """收集设备日志"""
+    try:
+        result = collect_device_logs(duration)
+        logger.info("收集设备日志完成")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 收集设备日志失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_app_memory_usage")
+def mcp_get_app_memory_usage(
+    package_name: str = Field(description="应用包名")
+) -> str:
+    """获取应用内存使用情况"""
+    try:
+        result = get_app_memory_usage(package_name)
+        logger.info(f"获取应用 {package_name} 内存使用成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取应用内存使用失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_app_cpu_usage")
+def mcp_get_app_cpu_usage(
+    package_name: str = Field(description="应用包名")
+) -> str:
+    """获取应用CPU使用情况"""
+    try:
+        result = get_app_cpu_usage(package_name)
+        logger.info(f"获取应用 {package_name} CPU使用成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取应用CPU使用失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_system_info")
+def mcp_get_system_info() -> str:
+    """获取系统信息汇总"""
+    try:
+        result = get_system_info()
+        logger.info("获取系统信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取系统信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+# ==================== 录屏功能工具 ====================
+
+@mcp.tool("record_screen")
+def mcp_record_screen(
+    duration: int = Field(10, description="录制时长（秒），默认10秒，最大180秒")
+) -> str:
+    """录制设备屏幕视频"""
+    try:
+        result = record_screen(duration)
+        logger.info(f"录制屏幕 {duration} 秒完成")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 录制屏幕失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("take_screenshot_base64")
+def mcp_take_screenshot_base64() -> str:
+    """截取屏幕并返回base64编码的图片"""
+    try:
+        result = take_screenshot_base64()
+        logger.info("截图成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 截图失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_screen_resolution")
+def mcp_get_screen_resolution() -> str:
+    """获取屏幕分辨率"""
+    try:
+        result = get_screen_resolution()
+        logger.info("获取屏幕分辨率成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取屏幕分辨率失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_screen_density")
+def mcp_get_screen_density() -> str:
+    """获取屏幕密度"""
+    try:
+        result = get_screen_density()
+        logger.info("获取屏幕密度成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取屏幕密度失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_display_info")
+def mcp_get_display_info() -> str:
+    """获取显示信息汇总"""
+    try:
+        result = get_display_info()
+        logger.info("获取显示信息成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取显示信息失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+# ==================== 元素发现工具 ====================
+
+@mcp.tool("dump_ui_hierarchy")
+def mcp_dump_ui_hierarchy() -> str:
+    """获取当前页面的完整UI层次结构（XML格式）"""
+    try:
+        result = dump_ui_hierarchy()
+        logger.info("获取UI层次结构成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取UI层次结构失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_all_elements")
+def mcp_get_all_elements() -> List[Dict[str, Any]]:
+    """获取当前页面的所有元素信息"""
+    try:
+        result = get_all_elements()
+        logger.info(f"获取到 {len(result)} 个元素")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取元素列表失败: {str(e)}"
+        logger.error(error_msg)
+        return [{"error": error_msg}]
+
+@mcp.tool("find_elements_by_text")
+def mcp_find_elements_by_text(
+    text: str = Field(description="要查找的文本内容"),
+    contains: bool = Field(True, description="是否包含匹配，默认True")
+) -> List[Dict[str, Any]]:
+    """根据文本内容查找元素"""
+    try:
+        result = find_elements_by_text(text, contains)
+        logger.info(f"根据文本 '{text}' 找到 {len(result)} 个元素")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 查找元素失败: {str(e)}"
+        logger.error(error_msg)
+        return [{"error": error_msg}]
+
+@mcp.tool("find_elements_by_resource_id")
+def mcp_find_elements_by_resource_id(
+    resource_id: str = Field(description="资源ID")
+) -> List[Dict[str, Any]]:
+    """根据资源ID查找元素"""
+    try:
+        result = find_elements_by_resource_id(resource_id)
+        logger.info(f"根据资源ID '{resource_id}' 找到 {len(result)} 个元素")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 查找元素失败: {str(e)}"
+        logger.error(error_msg)
+        return [{"error": error_msg}]
+
+@mcp.tool("find_clickable_elements")
+def mcp_find_clickable_elements() -> List[Dict[str, Any]]:
+    """查找所有可点击的元素"""
+    try:
+        result = find_clickable_elements()
+        logger.info(f"找到 {len(result)} 个可点击元素")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 查找可点击元素失败: {str(e)}"
+        logger.error(error_msg)
+        return [{"error": error_msg}]
+
+@mcp.tool("find_elements_by_class")
+def mcp_find_elements_by_class(
+    class_name: str = Field(description="类名")
+) -> List[Dict[str, Any]]:
+    """根据类名查找元素"""
+    try:
+        result = find_elements_by_class(class_name)
+        logger.info(f"根据类名 '{class_name}' 找到 {len(result)} 个元素")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 查找元素失败: {str(e)}"
+        logger.error(error_msg)
+        return [{"error": error_msg}]
+
+@mcp.tool("get_element_info_at_position")
+def mcp_get_element_info_at_position(
+    x: int = Field(description="X坐标"),
+    y: int = Field(description="Y坐标")
+) -> Optional[Dict[str, Any]]:
+    """获取指定坐标位置的元素信息"""
+    try:
+        result = get_element_info_at_position(x, y)
+        if result:
+            logger.info(f"获取位置 ({x}, {y}) 的元素信息成功")
+        else:
+            logger.info(f"位置 ({x}, {y}) 未找到元素")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取元素信息失败: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg}
+
+@mcp.tool("get_element_suggestions")
+def mcp_get_element_suggestions() -> Dict[str, List[Dict[str, Any]]]:
+    """获取页面元素建议，分类整理可操作的元素"""
+    try:
+        result = get_element_suggestions()
+        logger.info("获取元素建议成功")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 获取元素建议失败: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg}
+
+@mcp.tool("search_elements")
+def mcp_search_elements(
+    keyword: str = Field(description="搜索关键字")
+) -> List[Dict[str, Any]]:
+    """搜索包含关键字的元素（在text、resourceId、description中搜索）"""
+    try:
+        result = search_elements(keyword)
+        logger.info(f"搜索关键字 '{keyword}' 找到 {len(result)} 个元素")
+        return result
+    except Exception as e:
+        error_msg = f"❌ 搜索元素失败: {str(e)}"
+        logger.error(error_msg)
+        return [{"error": error_msg}]
+
 # ==================== 服务器启动 ====================
 
 def main():
@@ -654,8 +1219,8 @@ def main():
     except Exception as e:
         logger.warning(f"启动时设备初始化失败（可能需要手动初始化）: {str(e)}")
     
-    # 启动MCP服务器
-    mcp.run(host="127.0.0.1", port=8000)
+    # 启动MCP服务器（stdio模式，不需要host和port参数）
+    mcp.run()
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,47 @@
+name: 鹿客管家直播启动测试
+description: 测试从设备列表进入直播的完整流程（已修复UIAutomator服务稳定性问题）
+package_name: com.lockin.loock
+steps:
+  - action: 启动应用
+    element: "com.lockin.loock"
+    value: ""
+    description: 启动鹿客管家App，增加等待时间确保应用完全启动
+    expected: 应用成功启动，显示设备列表页面
+  
+  - action: 验证设备页面
+    element: "com.lockin.loock:id/tvTitle"
+    text: "设备"
+    description: 多重验证策略：底部导航栏、设备列表容器、设备名称、设备缩略图、ADB命令、UI dump（支持重试3次）
+    expected: 设备页面成功加载，任一验证方式通过即可
+  
+  - action: 查找设备
+    element: "com.lockin.loock:id/tvDeviceName"
+    text: "哈哈哈"
+    description: 查找设备名称，支持UiAutomator和ADB命令两种方式
+    expected: 设备列表中存在名称为「哈哈哈」的设备
+  
+  - action: 点击直播入口
+    element: "com.lockin.loock:id/ivThumb"
+    description: 点击设备缩略图进入直播页面（支持ivThumb、rlPlay、ADB坐标点击）
+    expected: 跳转到实时视频页面
+  
+  - action: 等待页面跳转
+    value: 10
+    description: 等待10秒让直播页面加载完成
+    expected: 页面成功跳转到实时视频页面
+  
+  - action: 验证直播启动
+    element: "textContains=KB/s"
+    description: 检测页面是否显示网速信息，支持UiAutomator、ADB dump、Activity检查三种方式
+    expected: 页面显示网速信息或直播Activity，表示直播已成功启动
+
+test_result:
+  status: passed
+  timestamp: 2026-05-28
+  details:
+    - 启动应用: 通过
+    - 验证设备页面: 通过（底部导航显示「设备」）
+    - 查找设备「哈哈哈」: 通过
+    - 点击直播入口: 通过
+    - 等待页面跳转: 通过
+    - 验证直播启动: 通过（检测到 "291 KB/s"）
