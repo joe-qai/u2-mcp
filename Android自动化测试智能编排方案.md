@@ -64,32 +64,806 @@
 
 ## Agent 核心能力
 
-### 1. ReAct 循环执行模式
+本方案实现的 Agent 具备完整的 **思考(Think) → 感知(Perceive) → 决策(Decide) → 执行(Act)** 循环，并配备 **记忆(Memory)** 系统实现上下文保持。
 
-Agent 采用 **ReAct (Reasoning + Acting)** 模式，通过推理-执行-观察的循环来完成任务：
+### 1. 完整 ReAct + Memory 架构
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     ReAct 执行循环                               │
-│                                                                 │
-│   ┌─────────┐                                                   │
-│   │ THOUGHT │  推理阶段：分析当前状态，决定下一步行动              │
-│   └────┬────┘                                                   │
-│        ↓                                                         │
-│   ┌────┴────┐                                                   │
-│   │  ACTION │  执行阶段：调用工具执行操作                        │
-│   └────┬────┘                                                   │
-│        ↓                                                         │
-│   ┌────┴────┐                                                   │
-│   │ OBSERVE │  观察阶段：获取执行结果，分析是否达成目标            │
-│   └────┬────┘                                                   │
-│        │                                                         │
-│        ↓                                                         │
-│   ┌────┴────┐                                                   │
-│   │ LOOP?   │  判断是否继续循环或结束                            │
-│   └─────────┘                                                   │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Agent 核心架构                                   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         📝 Memory System                              │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │   │
+│  │  │ Session      │  │ Working      │  │ Learned      │               │   │
+│  │  │ Memory       │  │ Memory       │  │ Knowledge    │               │   │
+│  │  │ (会话记忆)    │  │ (工作记忆)    │  │ (知识库)     │               │   │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                     │                                      │
+│                                     ▼                                      │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      🔄 ReAct Loop                                    │   │
+│  │                                                                       │   │
+│  │   ┌─────────┐      ┌─────────┐      ┌─────────┐      ┌─────────┐    │   │
+│  │   │  THINK  │ ───▶ │ DECIDE  │ ───▶ │   ACT   │ ───▶ │PERCEIVE │    │   │
+│  │   │ 推理    │      │ 决策    │      │ 执行    │      │ 感知    │    │   │
+│  │   └─────────┘      └─────────┘      └─────────┘      └─────────┘    │   │
+│  │        │                                               │            │   │
+│  │        │              Loop Back                        │            │   │
+│  │        └───────────────────────────────────────────────┘            │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### 2. 各模块详细职责
+
+| 模块 | 职责 | 输入 | 输出 |
+|------|------|------|------|
+| **Think (推理)** | 分析当前状态，理解任务目标，识别问题 | Memory上下文 + 当前状态 | 推理结果 + 下一步计划 |
+| **Decide (决策)** | 根据推理结果，决定行动方案 | 推理结果 | 具体行动指令 |
+| **Act (执行)** | 调用MCP工具执行操作 | 行动指令 | 执行结果 |
+| **Perceive (感知)** | 感知执行结果，判断是否达成目标 | 执行结果 | 状态更新 + 观察报告 |
+| **Memory (记忆)** | 存储会话上下文、工作状态、知识库 | 所有模块读写 | 持久化上下文 |
+
+---
+
+### 3. Memory 记忆系统实现
+
+```python
+class MemorySystem:
+    """记忆系统 - Agent 的知识管理核心"""
+
+    def __init__(self):
+        # 会话记忆：存储当前测试会话的完整上下文
+        self.session_memory = {
+            'task_id': None,
+            'user_request': None,
+            'completed_steps': [],      # 已完成的步骤列表
+            'failed_attempts': [],     # 失败尝试记录
+            'screenshots': [],          # 截图记录
+            'ui_dumps': [],            # UI层次结构记录
+        }
+
+        # 工作记忆：当前任务的即时状态
+        self.working_memory = {
+            'current_step': 0,
+            'current_page': None,
+            'page_source': None,
+            'visible_elements': [],     # 当前可见元素
+            'last_action': None,
+            'last_result': None,
+        }
+
+        # 知识库：学习到的经验知识
+        self.learned_knowledge = {
+            'element_locators': {},      # 元素定位表达式缓存
+            'app_structure': {},        # 应用页面结构
+            'successful_strategies': [], # 成功的策略模式
+            'failure_patterns': [],     # 失败模式记录
+        }
+
+    def remember(self, key, value):
+        """存入记忆"""
+        self.working_memory[key] = value
+        logger.debug(f"记住: {key} = {value}")
+
+    def recall(self, key):
+        """提取记忆"""
+        return self.working_memory.get(key)
+
+    def learn(self, pattern, strategy, success):
+        """学习经验"""
+        if success:
+            self.learned_knowledge['successful_strategies'].append({
+                'pattern': pattern,
+                'strategy': strategy,
+                'timestamp': time.time()
+            })
+        else:
+            self.learned_knowledge['failure_patterns'].append({
+                'pattern': pattern,
+                'timestamp': time.time()
+            })
+
+    def get_context(self):
+        """获取完整上下文用于LLM推理"""
+        return {
+            'session': self.session_memory,
+            'working': self.working_memory,
+            'knowledge': self.learned_knowledge
+        }
+```
+
+---
+
+### 4. Think 推理引擎实现
+
+```python
+class ReasoningEngine:
+    """推理引擎 - Think 模块"""
+
+    def __init__(self, memory: MemorySystem, llm_client):
+        self.memory = memory
+        self.llm = llm_client
+
+    def think(self, task_description: str) -> Dict:
+        """
+        推理阶段：分析当前状态，决定下一步行动
+
+        推理过程：
+        1. 理解任务目标
+        2. 分析当前页面状态
+        3. 检查历史记忆
+        4. 制定下一步计划
+        """
+        context = self.memory.get_context()
+
+        prompt = f"""
+你是Android自动化测试Agent。当前任务：{task_description}
+
+当前状态：
+- 已完成步骤：{context['session']['completed_steps']}
+- 当前步骤：{context['working']['current_step']}
+- 当前页面：{context['working']['current_page']}
+- 可见元素数：{len(context['working']['visible_elements'])}
+
+历史记忆：
+- 成功策略：{context['knowledge']['successful_strategies'][-3:]}
+- 失败模式：{context['knowledge']['failure_patterns'][-3:]}
+
+请进行推理分析：
+1. 当前页面是否包含目标元素？
+2. 如果不包含，可能的原因是什么？（5W1H分析）
+3. 历史经验对当前情况有什么启示？
+4. 下一步应该采取什么行动？
+
+请输出：
+- 分析结果（reasoning）
+- 下一步行动（next_action）
+- 行动参数（action_params）
+"""
+
+        response = self.llm.generate(prompt)
+
+        return {
+            'reasoning': response.get('reasoning'),
+            'next_action': response.get('next_action'),
+            'action_params': response.get('action_params'),
+            'confidence': response.get('confidence', 0.8)
+        }
+```
+
+---
+
+### 5. Decide 决策引擎实现
+
+```python
+class DecisionEngine:
+    """决策引擎 - Decide 模块"""
+
+    def __init__(self, memory: MemorySystem):
+        self.memory = memory
+        self.max_retries = 3
+        self.max_loops = 5
+
+    def decide(self, reasoning_result: Dict) -> Dict:
+        """
+        决策阶段：根据推理结果决定行动方案
+
+        决策树：
+        ├── 置信度 > 0.8 → 直接执行
+        ├── 置信度 0.5-0.8 → 执行 + 准备备选方案
+        └── 置信度 < 0.5 → 多策略并行尝试
+        """
+        confidence = reasoning_result.get('confidence', 0.5)
+        next_action = reasoning_result.get('next_action')
+
+        decision = {
+            'action': next_action,
+            'params': reasoning_result.get('action_params', {}),
+            'fallback': None,
+            'mode': None
+        }
+
+        # 根据置信度决定执行模式
+        if confidence > 0.8:
+            decision['mode'] = 'direct'  # 直接执行
+            decision['fallback'] = self._create_fallback(next_action)
+
+        elif confidence > 0.5:
+            decision['mode'] = 'cautious'  # 谨慎执行
+            decision['fallback'] = self._create_fallback(next_action)
+            decision['backup_strategies'] = self._get_backup_strategies(next_action)
+
+        else:
+            decision['mode'] = 'explorative'  # 探索执行
+            decision['parallel_strategies'] = self._get_parallel_strategies(next_action)
+
+        # 更新记忆
+        self.memory.remember('current_decision', decision)
+
+        return decision
+
+    def _create_fallback(self, action):
+        """创建备选方案"""
+        fallbacks = {
+            'find_element': [
+                {'type': 'text', 'value': None},
+                {'type': 'textContains', 'value': None},
+                {'type': 'xpath', 'value': None},
+                {'type': 'ocr', 'value': None},
+                {'type': 'coordinates', 'value': None}
+            ],
+            'click': [
+                {'type': 'adb_shell', 'command': 'input tap {x} {y}'},
+                {'type': ' swipe', 'direction': 'up'},
+            ]
+        }
+        return fallbacks.get(action, [])
+
+    def _get_backup_strategies(self, action):
+        """获取备份策略"""
+        return []
+
+    def _get_parallel_strategies(self, action):
+        """获取并行探索策略"""
+        return []
+```
+
+---
+
+### 6. Act 执行引擎实现
+
+```python
+class ActEngine:
+    """执行引擎 - Act 模块"""
+
+    def __init__(self, memory: MemorySystem, mcp_tools: MCPClient):
+        self.memory = memory
+        self.mcp = mcp_tools
+        self.d = mcp_tools.device
+
+    def execute(self, decision: Dict) -> Dict:
+        """
+        执行阶段：调用MCP工具执行操作
+
+        执行流程：
+        1. 解析决策指令
+        2. 调用MCP工具
+        3. 记录执行日志
+        4. 返回执行结果
+        """
+        action = decision.get('action')
+        params = decision.get('params', {})
+
+        logger.info(f"执行阶段 - 操作: {action}, 参数: {params}")
+
+        try:
+            if action == 'find_element':
+                result = self._find_element(params)
+
+            elif action == 'click_element':
+                result = self._click_element(params)
+
+            elif action == 'input_text':
+                result = self._input_text(params)
+
+            elif action == 'swipe':
+                result = self._swipe(params)
+
+            elif action == 'wait':
+                result = self._wait(params)
+
+            elif action == 'dump_ui':
+                result = self._dump_ui(params)
+
+            elif action == 'ocr_screen':
+                result = self._ocr_screen(params)
+
+            elif action == 'execute_adb':
+                result = self._execute_adb(params)
+
+            else:
+                result = {'success': False, 'error': f'未知操作: {action}'}
+
+            # 记录执行结果到记忆
+            self.memory.remember('last_action', action)
+            self.memory.remember('last_result', result)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"执行异常: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _find_element(self, params):
+        """查找元素"""
+        strategies = params.get('strategies', [
+            {'type': 'resourceId', 'value': params.get('resourceId')},
+            {'type': 'text', 'value': params.get('text')},
+            {'type': 'textContains', 'value': params.get('textContains')},
+            {'type': 'description', 'value': params.get('description')},
+            {'type': 'xpath', 'value': params.get('xpath')},
+        ])
+
+        for strategy in strategies:
+            try:
+                if strategy['type'] == 'resourceId':
+                    obj = self.d(resourceId=strategy['value'])
+                elif strategy['type'] == 'text':
+                    obj = self.d(text=strategy['value'])
+                elif strategy['type'] == 'textContains':
+                    obj = self.d(textContains=strategy['value'])
+                elif strategy['type'] == 'description':
+                    obj = self.d(description=strategy['value'])
+                elif strategy['type'] == 'xpath':
+                    obj = self.d.xpath(strategy['value'])
+                else:
+                    continue
+
+                if obj.exists:
+                    info = obj.info
+                    logger.info(f"元素找到: {strategy} -> {info.get('bounds')}")
+                    return {
+                        'success': True,
+                        'strategy': strategy,
+                        'bounds': info.get('bounds'),
+                        'text': info.get('text'),
+                        'enabled': info.get('enabled')
+                    }
+            except Exception as e:
+                logger.debug(f"定位失败 {strategy['type']}: {e}")
+                continue
+
+        return {'success': False, 'error': '所有定位方式均失败'}
+
+    def _click_element(self, params):
+        """点击元素"""
+        element_result = self._find_element(params)
+        if element_result.get('success'):
+            obj = self._get_element_object(element_result['strategy'])
+            obj.click()
+            return {'success': True, 'action': 'click', 'element': element_result}
+        return {'success': False, 'error': '无法点击元素'}
+
+    def _swipe(self, params):
+        """滑动屏幕"""
+        direction = params.get('direction', 'up')
+        scale = params.get('scale', 0.9)
+        self.d.swipe_screen(direction=direction, scale=scale)
+        return {'success': True, 'action': 'swipe', 'direction': direction}
+
+    def _wait(self, params):
+        """等待"""
+        seconds = params.get('seconds', 2)
+        time.sleep(seconds)
+        return {'success': True, 'action': 'wait', 'duration': seconds}
+
+    def _dump_ui(self, params):
+        """获取UI层次结构"""
+        xml = self.d.dump_hierarchy()
+        self.memory.remember('page_source', xml)
+        return {'success': True, 'ui_xml': xml}
+
+    def _ocr_screen(self, params):
+        """OCR屏幕识别"""
+        text = self.mcp.ocr_screen()
+        self.memory.remember('screen_text', text)
+        return {'success': True, 'text': text}
+
+    def _execute_adb(self, params):
+        """执行ADB命令"""
+        command = params.get('command')
+        stdout, stderr = self.mcp.execute_adb_command(command)
+        return {'success': not stderr, 'stdout': stdout, 'stderr': stderr}
+```
+
+---
+
+### 7. Perceive 感知引擎实现
+
+```python
+class PerceptionEngine:
+    """感知引擎 - Perceive 模块"""
+
+    def __init__(self, memory: MemorySystem):
+        self.memory = memory
+
+    def perceive(self, act_result: Dict) -> Dict:
+        """
+        感知阶段：观察执行结果，判断是否达成目标
+
+        感知内容：
+        1. 操作是否成功
+        2. 页面状态是否变化
+        3. 是否出现异常
+        4. 是否达成目标
+        """
+        success = act_result.get('success', False)
+        action = self.memory.recall('last_action')
+        expected = self._get_expected_outcome(action)
+
+        perception = {
+            'success': success,
+            'action': action,
+            'expected': expected,
+            'actual': act_result,
+            'goal_achieved': False,
+            'anomalies': [],
+            'observations': []
+        }
+
+        if success:
+            # 分析操作结果是否符合预期
+            if action == 'find_element':
+                perception['goal_achieved'] = act_result.get('success', False)
+                perception['observations'].append(f"元素{'找到' if act_result.get('success') else '未找到'}")
+
+            elif action == 'click_element':
+                # 点击后通常页面会跳转，检查页面变化
+                page_changed = self._check_page_change()
+                perception['goal_achieved'] = page_changed
+                perception['observations'].append(f"页面{'已跳转' if page_changed else '未变化'}")
+
+            elif action == 'swipe':
+                perception['observations'].append("滑动操作执行")
+                perception['goal_achieved'] = True
+
+        else:
+            # 分析失败原因
+            error = act_result.get('error', '未知错误')
+            perception['anomalies'].append(error)
+
+            # 根据错误类型判断是否可恢复
+            if '超时' in error or '等待' in error:
+                perception['recoverable'] = True
+            elif '未找到' in error:
+                perception['recoverable'] = True
+            else:
+                perception['recoverable'] = False
+
+        # 更新工作记忆
+        self.memory.remember('last_perception', perception)
+
+        return perception
+
+    def _get_expected_outcome(self, action):
+        """获取预期结果"""
+        expectations = {
+            'find_element': '元素存在于当前页面',
+            'click_element': '元素被点击，页面发生变化',
+            'input_text': '文本被输入到元素中',
+            'swipe': '屏幕发生滑动',
+            'wait': '等待完成',
+            'dump_ui': '获取到UI层次结构',
+            'ocr_screen': '识别到屏幕文字'
+        }
+        return expectations.get(action, '操作完成')
+
+    def _check_page_change(self):
+        """检查页面是否变化"""
+        old_page = self.memory.recall('current_page')
+        # 实际实现中会获取新页面进行比较
+        new_page = None
+        return old_page != new_page
+```
+
+---
+
+### 8. 完整 ReAct Loop 整合
+
+```python
+class ReActAgent:
+    """
+    完整的 ReAct Agent 实现
+
+    包含：Think(推理) + Decide(决策) + Act(执行) + Perceive(感知) + Memory(记忆)
+    """
+
+    def __init__(self, mcp_client: MCPClient, llm_client=None):
+        self.memory = MemorySystem()
+        self.reasoner = ReasoningEngine(self.memory, llm_client)
+        self.decider = DecisionEngine(self.memory)
+        self.actor = ActEngine(self.memory, mcp_client)
+        self.perceiver = PerceptionEngine(self.memory)
+
+        self.max_loops = 10
+        self.max_step_retries = 3
+
+    def run(self, task: str) -> Dict:
+        """
+        执行完整 ReAct 循环
+
+        流程：
+        1. Think: 分析任务和当前状态
+        2. Decide: 制定行动决策
+        3. Act: 执行操作
+        4. Perceive: 观察结果
+        5. Loop: 判断是否继续
+        """
+        logger.info(f"=== 开始执行任务: {task} ===")
+
+        self.memory.session_memory['user_request'] = task
+        self.memory.session_memory['task_id'] = generate_task_id()
+
+        for loop in range(self.max_loops):
+            logger.info(f"--- Loop {loop + 1}/{self.max_loops} ---")
+
+            # Step 1: Think - 推理
+            reasoning = self.reasoner.think(task)
+            logger.info(f"推理结果: {reasoning.get('reasoning')}")
+
+            # 记录推理结果
+            self.memory.session_memory['current_reasoning'] = reasoning
+
+            # Step 2: Decide - 决策
+            decision = self.decider.decide(reasoning)
+            logger.info(f"决策方案: {decision.get('action')} (mode: {decision.get('mode')})")
+
+            # Step 3: Act - 执行
+            act_result = self.actor.execute(decision)
+            logger.info(f"执行结果: {act_result}")
+
+            # Step 4: Perceive - 感知
+            perception = self.perceiver.perceive(act_result)
+            logger.info(f"感知结果: goal_achieved={perception.get('goal_achieved')}")
+
+            # 判断是否达成目标
+            if perception.get('goal_achieved'):
+                logger.info("=== 目标达成！===")
+                self._record_success()
+                return {'success': True, 'loops': loop + 1, 'perception': perception}
+
+            # 判断是否可恢复
+            if not perception.get('recoverable', True):
+                logger.warning("遇到不可恢复错误")
+                self._handle_irrecoverable_error(perception)
+                return {'success': False, 'error': perception.get('anomalies')}
+
+            # 更新循环计数
+            self._update_loop_state(loop, reasoning, decision, act_result, perception)
+
+        # 达到最大循环次数
+        logger.error("达到最大循环次数，任务失败")
+        return {'success': False, 'error': 'max_loops_exceeded'}
+
+    def _record_success(self):
+        """记录成功经验到记忆"""
+        self.memory.learn(
+            pattern=self.memory.recall('current_page'),
+            strategy=self.memory.recall('last_action'),
+            success=True
+        )
+
+    def _handle_irrecoverable_error(self, perception):
+        """处理不可恢复错误"""
+        self.memory.session_memory['failed_attempts'].append({
+            'perception': perception,
+            'timestamp': time.time()
+        })
+
+    def _update_loop_state(self, loop, reasoning, decision, act_result, perception):
+        """更新循环状态"""
+        self.memory.remember('current_loop', loop)
+        self.memory.remember('current_reasoning', reasoning)
+        self.memory.remember('current_decision', decision)
+        self.memory.remember('current_act_result', act_result)
+        self.memory.remember('current_perception', perception)
+
+    def get_test_case_yaml(self) -> str:
+        """从记忆生成YAML测试用例"""
+        steps = []
+        for step in self.memory.session_memory['completed_steps']:
+            steps.append({
+                'action': step['action'],
+                'element': step.get('element'),
+                'expected': step.get('expected'),
+                'verify_methods': step.get('verify_methods', [])
+            })
+
+        return yaml.dump({
+            'name': self.memory.session_memory.get('task_id'),
+            'description': self.memory.session_memory.get('user_request'),
+            'steps': steps
+        }, allow_unicode=True)
+
+    def get_test_script(self) -> str:
+        """从记忆生成Python测试脚本"""
+        # 根据记忆中的执行过程生成可执行脚本
+        script_template = '''
+import uiautomator2 as u2
+import pytest
+import time
+
+class TestGenerated:
+    def setup_method(self):
+        self.d = u2.connect()
+        self.d.implicitly_wait(30)
+
+    # TODO: 根据执行历史生成完整测试代码
+'''
+
+        return script_template
+```
+
+---
+
+### 9. 执行流程示例
+
+以"启动鹿客管家App，找到哈哈哈设备，进入直播"为例，完整执行流程如下：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        完整执行流程示例                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+用户输入: "启动鹿客管家App，找到哈哈哈设备，进入直播"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Loop 1: Think → Decide → Act → Perceive
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【Think 推理】
+输入: 任务描述 + 当前状态(无)
+分析: 
+  - 这是一个多步骤任务，需要拆解
+  - 第一步：启动应用
+  - 第二步：等待页面加载
+  - 第三步：查找设备
+  - 第四步：点击进入
+  - 第五步：验证直播启动
+输出: next_action="start_app", params={package: "com.lockin.loock"}
+
+【Decide 决策】
+输入: 推理结果
+决策:
+  - 置信度高(0.95)，直接执行
+  - 模式: direct
+  - 备选方案: 重启UIAutomator服务
+输出: action="start_app", mode="direct", fallback=["restart_service"]
+
+【Act 执行】
+调用MCP工具: mcp.start_app(package_name="com.lockin.loock")
+结果: {'success': True, 'activity': '.MainActivity'}
+
+【Perceive 感知】
+观察执行结果:
+  - 操作成功 ✓
+  - 应用已启动 ✓
+  - 应进入设备列表页面
+判断: 目标部分达成，继续下一步
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Loop 2: Think → Decide → Act → Perceive
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【Think 推理】
+输入: 任务 + 记忆(应用已启动)
+分析:
+  - 应用已启动，需要验证设备页面
+  - 验证方式：检查"设备"文本或底部导航栏
+  - 可能需要等待页面加载
+输出: next_action="verify_page", params={expected_text: "设备"}
+
+【Decide 决策】
+输入: 推理结果
+决策:
+  - 需要多种验证方式并行检查
+  - 模式: cautious
+  - 验证方法: resourceId(text="设备") + 底部导航栏 + ADB dumpsys
+输出: action="verify_page", mode="cautious", strategies=[...]
+
+【Act 执行】
+调用MCP工具: mcp.dump_ui() + mcp.ocr_screen()
+获取页面结构，分析是否包含设备列表元素
+
+【Perceive 感知】
+观察结果:
+  - 页面包含 com.lockin.loock:id/tvTitle (text="设备") ✓
+  - 页面包含设备列表容器 ✓
+  - 页面可见元素数量: 23
+判断: 设备页面验证成功 ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Loop 3-5: 查找设备 "哈哈哈" 
+（包含多次 Think/Act/Perceive 循环处理元素定位失败）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【Think 推理】
+输入: 任务 + 当前页面信息
+分析:
+  - 需要在设备列表中找到"哈哈哈"设备
+  - 当前页面有多个设备，如何定位？
+  - 尝试使用 resourceId + textContains
+输出: next_action="find_element", params={resourceId: "tvDeviceName", textContains: "哈哈哈"}
+
+【Act 执行】
+调用MCP工具: mcp.find_element(resourceId="tvDeviceName", textContains="哈哈哈")
+结果: {'success': False, 'error': '元素未找到'}
+
+【Perceive 感知】
+观察结果:
+  - 元素定位失败
+  - 可能原因: 设备名称包含emoji("哈哈哈😂")而非纯文本
+  - 需要使用模糊匹配
+判断: 需要降级策略
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Loop 4: 降级策略执行
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【Think 推理】
+输入: 之前的失败信息
+分析:
+  - 精确匹配失败，需要模糊匹配
+  - 尝试 textContains="哈哈哈"
+输出: next_action="find_element", params={textContains: "哈哈哈"}
+
+【Act 执行】
+调用MCP工具: mcp.find_element(textContains="哈哈哈")
+结果: {'success': True, 'bounds': {x: 100, y: 350, x2: 500, y2: 420}}
+
+【Perceive 感知】
+观察结果:
+  - 成功找到包含"哈哈哈"的元素
+  - 元素位于设备列表中
+判断: 设备查找成功 ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Loop 5-6: 点击设备进入直播
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【Act 执行】
+调用MCP工具: mcp.click_element(resourceId="ivThumb")
+点击设备缩略图
+
+【等待页面跳转】
+调用MCP工具: mcp.wait(seconds=10)
+
+【验证直播启动】
+调用MCP工具: mcp.find_element(textContains="KB/s")
+结果: {'success': True}
+
+【最终判断】
+观察结果:
+  - 网速信息 "KB/s" 出现在页面 ✓
+  - 直播启动成功 ✓
+目标达成！任务完成！
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+生成测试产物
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【YAML测试用例】
+自动生成可维护的YAML测试用例文件
+
+【Python测试脚本】
+自动生成可直接执行的Python自动化脚本
+
+【测试报告】
+记录完整执行过程和结果
+```
+
+---
+
+### 10. 与之前调试流程的关系
+
+本方案中的 ReAct Agent 实现与之前实际调试鹿客管家直播启动流程完全一致：
+
+| 调试过程中的操作 | Agent模块 | 说明 |
+|-----------------|----------|------|
+| 分析设备页面未显示原因 | Think | 推理分析可能原因 |
+| 决定增加等待时间+多方式验证 | Decide | 决策采用谨慎模式 |
+| 调用 start_app + dump_ui | Act | 执行MCP工具操作 |
+| 检查是否出现"设备"文本 | Perceive | 感知验证页面状态 |
+| 记录定位策略和失败原因 | Memory | 记忆学习经验 |
+
+**关键差异**：
+- 之前是手动编写代码调用工具
+- 现在是将调用过程封装为自主决策的Agent
+- Agent根据每次执行结果自主决定下一步行动
 
 #### Prompt 模板（ReAct 推理）
 
