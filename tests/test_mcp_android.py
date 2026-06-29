@@ -109,6 +109,104 @@ class TestOCRModule:
         except RuntimeError:
             pytest.skip("PaddleOCR未安装或设备未连接")
 
+    def test_ocr_screen_returns_text(self):
+        """测试OCR屏幕识别返回文本内容"""
+        ocr = OCRManager()
+        try:
+            result = ocr.ocr_screen()
+            assert isinstance(result, str)
+            # 检查返回内容是否合理（非空或包含预期的文本特征）
+        except RuntimeError as e:
+            error_msg = str(e)
+            if "PaddleOCR" in error_msg or "paddlepaddle" in error_msg.lower() or "paddle_static" in error_msg:
+                pytest.skip("PaddleOCR或paddlepaddle未安装")
+            raise
+
+    def test_ocr_screen_detailed_returns_list(self):
+        """测试OCR详细识别返回列表"""
+        ocr = OCRManager()
+        try:
+            result = ocr.ocr_screen_detailed()
+            assert isinstance(result, list)
+            # 如果有识别结果，检查每个结果的结构
+            if len(result) > 0:
+                for item in result:
+                    assert "text" in item
+                    assert "confidence" in item
+                    assert "bbox" in item
+        except RuntimeError as e:
+            error_msg = str(e)
+            if "PaddleOCR" in error_msg or "paddlepaddle" in error_msg.lower() or "paddle_static" in error_msg:
+                pytest.skip("PaddleOCR或paddlepaddle未安装")
+            raise
+
+    def test_find_text_position_returns_coordinates(self):
+        """测试查找文本位置返回坐标"""
+        ocr = OCRManager()
+        try:
+            # 使用一个常见的界面文本进行测试
+            result = ocr.find_text_position("设置")
+            if result is not None:
+                assert isinstance(result, tuple)
+                assert len(result) == 2
+                assert isinstance(result[0], int)
+                assert isinstance(result[1], int)
+            # 如果找不到文本，返回None也是预期行为
+        except RuntimeError as e:
+            error_msg = str(e)
+            if "PaddleOCR" in error_msg or "paddlepaddle" in error_msg.lower() or "paddle_static" in error_msg:
+                pytest.skip("PaddleOCR或paddlepaddle未安装")
+            raise
+
+    def test_click_text_finds_common_text(self):
+        """测试点击文本功能（需要设备连接）"""
+        ocr = OCRManager()
+        try:
+            # 尝试点击一个常见文本，测试函数是否正常执行
+            result = ocr.click_text("设置")
+            # 返回True表示点击成功，False表示未找到文本
+            assert isinstance(result, bool)
+        except RuntimeError as e:
+            error_msg = str(e)
+            if "PaddleOCR" in error_msg or "paddlepaddle" in error_msg.lower() or "paddle_static" in error_msg:
+                pytest.skip("PaddleOCR或paddlepaddle未安装")
+            elif "device" in error_msg.lower():
+                pytest.skip("设备未连接")
+            raise
+
+    def test_click_position_valid_coordinates(self):
+        """测试点击位置功能（需要设备连接）"""
+        ocr = OCRManager()
+        try:
+            # 测试点击屏幕中心位置
+            result = ocr.click_position(500, 500)
+            assert result is True
+        except RuntimeError as e:
+            if "device" in str(e).lower():
+                pytest.skip("设备未连接")
+            raise
+
+    def test_click_position_invalid_coordinates(self):
+        """测试点击无效坐标"""
+        ocr = OCRManager()
+        try:
+            # 超出屏幕范围的坐标应该返回False或抛出异常
+            result = ocr.click_position(-100, -100)
+            assert result is False
+        except (RuntimeError, ValueError):
+            # 某些实现可能会抛出异常，这也是合理的
+            pytest.skip("坐标验证行为因实现而异")
+
+    def test_cache_mechanism(self):
+        """测试OCR缓存机制"""
+        ocr = OCRManager()
+        # 验证缓存属性存在
+        assert hasattr(ocr, '_last_ocr_time')
+        assert hasattr(ocr, '_last_ocr_result')
+        # 验证初始状态
+        assert ocr._last_ocr_time == 0.0
+        assert ocr._last_ocr_result is None
+
 
 class TestInputValidation:
     """输入验证测试"""

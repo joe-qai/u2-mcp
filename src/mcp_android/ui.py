@@ -4,8 +4,9 @@ UI操作模块 - 提供Android UI自动化操作功能
 本模块提供点击、输入、滑动等UI交互操作。
 """
 
-from typing import Optional
 import time
+from typing import Optional
+
 from .android import get_device
 
 
@@ -35,7 +36,7 @@ def click_element(
     """
     if not text and not description and not resourceId and not xpath:
         raise ValueError("必须提供至少一个定位参数: text, description, resourceId 或 xpath")
-    
+
     device = get_device()
 
     try:
@@ -97,10 +98,10 @@ def swipe_screen(direction: str, scale: float = 0.9) -> None:
     """
     if direction not in ["up", "down", "left", "right"]:
         raise ValueError(f"无效的方向参数: {direction}，支持: up, down, left, right")
-    
+
     if scale <= 0 or scale > 1:
         raise ValueError(f"scale参数必须在0-1之间，当前值: {scale}")
-    
+
     device = get_device()
     window_size = device.window_size()
     width, height = window_size[0], window_size[1]
@@ -148,7 +149,7 @@ def wait_and_click_element(
     """
     if not text and not description:
         raise ValueError("必须提供text或description参数")
-    
+
     device = get_device()
     start_time = time.time()
 
@@ -184,7 +185,7 @@ def scroll_to_element(
     """
     if not text and not description:
         raise ValueError("必须提供text或description参数")
-    
+
     device = get_device()
 
     try:
@@ -221,7 +222,7 @@ def long_click_element(
     """
     if not text and not description and not resourceId:
         raise ValueError("必须提供至少一个定位参数: text, description 或 resourceId")
-    
+
     device = get_device()
 
     try:

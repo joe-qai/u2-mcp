@@ -4,10 +4,11 @@ Android设备管理模块 - 提供基础的Android设备操作功能
 本模块提供ADB命令执行、包管理、屏幕截图等核心功能。
 """
 
-import uiautomator2 as u2
-from typing import Optional, List, Any, Dict
-from PIL import Image
 import io
+from typing import Any, Dict, Optional
+
+import uiautomator2 as u2
+from PIL import Image
 
 # 全局设备对象
 _device: Optional[u2.Device] = None

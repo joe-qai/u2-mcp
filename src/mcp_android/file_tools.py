@@ -4,10 +4,10 @@
 本模块提供文件上传、下载、列表、读取等文件管理功能。
 """
 
-from typing import Optional
+import base64
 import os
 import tempfile
-import base64
+
 from .android import get_device
 
 
@@ -100,17 +100,17 @@ def download_file(device_path: str) -> str:
     device = get_device()
     try:
         _, ext = os.path.splitext(device_path)
-        
+
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as temp_file:
             temp_path = temp_file.name
-        
+
         device.pull(device_path, temp_path)
-        
+
         with open(temp_path, "rb") as file:
             base64_data = base64.b64encode(file.read()).decode("utf-8")
-        
+
         os.remove(temp_path)
-        
+
         mime_types = {
             ".png": "image/png",
             ".jpg": "image/jpeg",
@@ -122,7 +122,7 @@ def download_file(device_path: str) -> str:
             ".txt": "text/plain",
         }
         mime_type = mime_types.get(ext.lower(), "application/octet-stream")
-        
+
         return f"data:{mime_type};base64,{base64_data}"
     except Exception as e:
         return f"下载文件失败: {str(e)}"
@@ -144,10 +144,10 @@ def write_text_file(device_path: str, content: str) -> str:
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
             temp_file.write(content)
             temp_path = temp_file.name
-        
+
         device.push(temp_path, device_path)
         os.remove(temp_path)
-        
+
         return f"成功在设备上创建文件: {device_path}"
     except Exception as e:
         return f"创建文件失败: {str(e)}"

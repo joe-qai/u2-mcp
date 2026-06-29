@@ -4,13 +4,15 @@
 本模块提供应用启动、停止、设备初始化等功能。
 """
 
-import uiautomator2 as u2
-from typing import Tuple, Optional, Dict, Any
-import time
-import subprocess
-import os
 import logging
-from .android import set_device, get_device
+import os
+import subprocess
+import time
+from typing import Any, Dict, Optional, Tuple
+
+import uiautomator2 as u2
+
+from .android import get_device, set_device
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ def init_uiautomator2(serial: Optional[str] = None) -> str:
         adb_output = subprocess.run(
             ["adb", "devices"], capture_output=True, text=True
         ).stdout
-        
+
         # 解析已连接设备列表
         connected_devices = []
         for line in adb_output.strip().split("\n")[1:]:
@@ -208,7 +210,7 @@ def restart_uiautomator2() -> str:
             device.shell("am force-stop com.github.uiautomator")
             device.shell("am force-stop com.github.uiautomator.test")
             time.sleep(1)
-        except Exception as e:
+        except Exception:
             pass  # 忽略停止失败
 
         # 重新启动服务
@@ -255,10 +257,10 @@ def start_app(package_name: str, activity: Optional[str] = None) -> bool:
             device.app_start(package_name, activity, wait=True)
         else:
             device.app_start(package_name, wait=True)
-        
+
         time.sleep(1)  # 等待应用启动
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 

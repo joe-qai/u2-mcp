@@ -4,9 +4,9 @@ OCR识别模块 - 提供屏幕文本识别功能
 本模块基于PaddleOCR实现屏幕文本识别，支持文本定位和点击操作。
 """
 
-from typing import Optional, Tuple, List, Dict, Any
 import time
-from PIL import Image
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 
 try:
@@ -44,13 +44,13 @@ class OCRManager:
         """确保OCR引擎已初始化"""
         if not PADDLE_OCR_AVAILABLE:
             raise RuntimeError("PaddleOCR未安装，请安装paddleocr包")
-        
+
         if self._ocr is None:
             # 初始化PaddleOCR，使用中英文模型
-            self._ocr = PaddleOCR(
-                use_textline_orientation=True,
-                lang="ch"
-            )
+            try:
+                self._ocr = PaddleOCR(lang="ch")
+            except Exception:
+                self._ocr = PaddleOCR(use_angle_cls=True, lang="ch")
 
     def ocr_screen(self) -> str:
         """
@@ -66,14 +66,19 @@ class OCRManager:
 
         try:
             screenshot = get_screenshot()
-            result = self._ocr.ocr(np.array(screenshot), cls=True)
-            
+            try:
+                # 新版本PaddleOCR已移除cls参数
+                result = self._ocr.ocr(np.array(screenshot))
+            except TypeError:
+                # 兼容旧版本PaddleOCR
+                result = self._ocr.ocr(np.array(screenshot), cls=True)
+
             text_lines = []
             if result and result[0]:
                 for line in result[0]:
                     if line[1] and line[1][0]:
                         text_lines.append(line[1][0])
-            
+
             return "\n".join(text_lines)
         except Exception as e:
             raise RuntimeError(f"OCR识别失败: {str(e)}") from e
@@ -92,8 +97,13 @@ class OCRManager:
 
         try:
             screenshot = get_screenshot()
-            result = self._ocr.ocr(np.array(screenshot), cls=True)
-            
+            try:
+                # 新版本PaddleOCR已移除cls参数
+                result = self._ocr.ocr(np.array(screenshot))
+            except TypeError:
+                # 兼容旧版本PaddleOCR
+                result = self._ocr.ocr(np.array(screenshot), cls=True)
+
             detailed_results = []
             if result and result[0]:
                 for line in result[0]:
@@ -102,11 +112,11 @@ class OCRManager:
                         bbox = line[0]
                         text = line[1][0]
                         confidence = line[1][1]
-                        
+
                         # 计算中心点
                         x_center = (bbox[0][0] + bbox[2][0]) / 2
                         y_center = (bbox[0][1] + bbox[2][1]) / 2
-                        
+
                         detailed_results.append({
                             "text": text,
                             "confidence": confidence,
@@ -114,7 +124,7 @@ class OCRManager:
                             "y": int(y_center),
                             "bbox": [[int(p[0]), int(p[1])] for p in bbox]
                         })
-            
+
             return detailed_results
         except Exception as e:
             raise RuntimeError(f"OCR识别失败: {str(e)}") from e
@@ -136,8 +146,13 @@ class OCRManager:
 
         try:
             screenshot = get_screenshot()
-            result = self._ocr.ocr(np.array(screenshot), cls=True)
-            
+            try:
+                # 新版本PaddleOCR已移除cls参数
+                result = self._ocr.ocr(np.array(screenshot))
+            except TypeError:
+                # 兼容旧版本PaddleOCR
+                result = self._ocr.ocr(np.array(screenshot), cls=True)
+
             if result and result[0]:
                 for line in result[0]:
                     if line[1] and line[1][0]:
@@ -147,7 +162,7 @@ class OCRManager:
                             x_center = (bbox[0][0] + bbox[2][0]) / 2
                             y_center = (bbox[0][1] + bbox[2][1]) / 2
                             return int(x_center), int(y_center)
-            
+
             return None
         except Exception as e:
             raise RuntimeError(f"查找文本位置失败: {str(e)}") from e
