@@ -242,3 +242,96 @@ def long_click_element(
         return False
     except Exception as e:
         raise RuntimeError(f"长按元素失败: {str(e)}") from e
+
+
+def press_key(key_name: str) -> bool:
+    """
+    模拟系统按键
+    
+    支持的按键: home, back, left, right, up, down, center, menu, search, enter,
+    delete(del), recent(recent apps), volume_up, volume_down, volume_mute, camera, power
+    
+    Args:
+        key_name: 按键名称
+        
+    Returns:
+        bool: 是否成功
+    """
+    try:
+        device = get_device()
+        device.press(key_name)
+        time.sleep(0.3)
+        return True
+    except Exception:
+        return False
+
+
+def unlock_screen() -> bool:
+    """
+    解锁屏幕
+    
+    Returns:
+        bool: 是否解锁成功
+    """
+    try:
+        device = get_device()
+        device.unlock()
+        time.sleep(0.5)
+        return True
+    except Exception:
+        return False
+
+
+def drag(
+    start_x: int,
+    start_y: int,
+    end_x: int,
+    end_y: int,
+    duration: float = 0.5,
+) -> bool:
+    """
+    拖拽（长按并移动到目标位置）
+
+    Args:
+        start_x: 起始 X 坐标
+        start_y: 起始 Y 坐标
+        end_x: 结束 X 坐标
+        end_y: 结束 Y 坐标
+        duration: 拖拽持续时间（秒），默认 0.5 秒
+
+    Returns:
+        bool: 是否执行成功
+    """
+    try:
+        device = get_device()
+        device.drag(start_x, start_y, end_x, end_y, duration=duration)
+        time.sleep(0.3)
+        return True
+    except Exception:
+        return False
+
+
+def set_clipboard(text: str, label: Optional[str] = None) -> bool:
+    """
+    设置剪贴板内容
+    
+    Args:
+        text: 剪贴板文本
+        label: 可选的标签
+        
+    Returns:
+        bool: 是否设置成功
+    """
+    try:
+        device = get_device()
+        sess = device.session()
+        try:
+            if label:
+                sess.set_clipboard(text, label)
+            else:
+                sess.set_clipboard(text)
+            return True
+        finally:
+            sess.close()
+    except Exception:
+        return False

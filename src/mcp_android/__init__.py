@@ -24,12 +24,16 @@ from .android import (
 from .app import (
     check_uiautomator2,
     clear_app_data,
+    get_app_info,
     get_current_app,
     init_uiautomator2,
     install_apk,
+    list_running_apps,
     restart_uiautomator2,
     start_app,
     stop_app,
+    uninstall_app,
+    wait_for_activity,
 )
 from .element_finder import (
     dump_ui_hierarchy,
@@ -54,6 +58,15 @@ from .file_tools import (
     write_text_file,
 )
 from .ocr import OCRManager
+from .device_tools import (
+    freeze_rotation,
+    is_screen_on,
+    open_notification,
+    open_quick_settings,
+    set_orientation,
+    sleep,
+    wakeup,
+)
 from .screen_tools import (
     get_display_info,
     get_screen_density,
@@ -63,10 +76,14 @@ from .screen_tools import (
 )
 from .ui import (
     click_element,
+    drag,
     input_text,
     long_click_element,
+    press_key,
     scroll_to_element,
+    set_clipboard,
     swipe_screen,
+    unlock_screen,
     wait_and_click_element,
 )
 
@@ -81,11 +98,15 @@ __all__ = [
 
     # ui.py
     "click_element",
+    "drag",
     "input_text",
     "swipe_screen",
     "wait_and_click_element",
     "scroll_to_element",
     "long_click_element",
+    "press_key",
+    "unlock_screen",
+    "set_clipboard",
 
     # app.py
     "init_uiautomator2",
@@ -96,6 +117,10 @@ __all__ = [
     "get_current_app",
     "clear_app_data",
     "install_apk",
+    "get_app_info",
+    "uninstall_app",
+    "list_running_apps",
+    "wait_for_activity",
 
     # ocr.py
     "OCRManager",
@@ -117,6 +142,15 @@ __all__ = [
     "get_screen_resolution",
     "get_screen_density",
     "get_display_info",
+
+    # device_tools.py
+    "wakeup",
+    "sleep",
+    "open_notification",
+    "open_quick_settings",
+    "set_orientation",
+    "freeze_rotation",
+    "is_screen_on",
 
     # element_finder.py
     "dump_ui_hierarchy",

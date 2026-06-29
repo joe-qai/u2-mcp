@@ -39,10 +39,13 @@ mcp = FastMCP("UIAutomator2 MCP Server", version="1.0.0")
 from mcp_android import (
     OCRManager,
     check_uiautomator2,
+    clear_app_data,
     click_element,
     create_directory,
     delete_file,
+    # 设备管理
     download_file,
+    drag,
     # 元素发现
     dump_ui_hierarchy,
     execute_adb_shell_command,
@@ -50,7 +53,9 @@ from mcp_android import (
     find_elements_by_class,
     find_elements_by_resource_id,
     find_elements_by_text,
+    freeze_rotation,
     get_all_elements,
+    get_app_info,
     get_current_app,
     get_device_info,
     get_display_info,
@@ -62,9 +67,15 @@ from mcp_android import (
     get_screen_resolution,
     init_uiautomator2,
     input_text,
+    install_apk,
+    is_screen_on,
     # 文件管理
     list_files,
+    list_running_apps,
     long_click_element,
+    open_notification,
+    open_quick_settings,
+    press_key,
     pull_file,
     push_file,
     read_text_file,
@@ -73,11 +84,18 @@ from mcp_android import (
     restart_uiautomator2,
     scroll_to_element,
     search_elements,
+    set_clipboard,
+    set_orientation,
+    sleep,
     start_app,
     stop_app,
     swipe_screen,
     take_screenshot_base64,
+    uninstall_app,
+    unlock_screen,
     wait_and_click_element,
+    wait_for_activity,
+    wakeup,
     write_text_file,
 )
 
@@ -251,6 +269,95 @@ def mcp_get_current_app() -> Dict[str, str]:
     except Exception as e:
         logger.error(f"获取当前应用失败: {str(e)}")
         return {"package": "", "activity": ""}
+
+@mcp.tool("clear_app_data")
+def mcp_clear_app_data(
+    package_name: str = Field(description="应用包名")
+) -> str:
+    """清除应用数据（pm clear）"""
+    try:
+        success = clear_app_data(package_name)
+        if success:
+            return f"✅ 已清除 {package_name} 的应用数据"
+        else:
+            return f"❌ 清除 {package_name} 的应用数据失败"
+    except Exception as e:
+        error_msg = f"❌ 清除应用数据失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("install_apk")
+def mcp_install_apk(
+    apk_path: str = Field(description="设备上的APK文件路径")
+) -> str:
+    """在设备上安装APK文件"""
+    try:
+        success = install_apk(apk_path)
+        if success:
+            return f"✅ APK安装成功: {apk_path}"
+        else:
+            return f"❌ APK安装失败: {apk_path}"
+    except Exception as e:
+        error_msg = f"❌ 安装APK失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("get_app_info")
+def mcp_get_app_info(
+    package_name: str = Field(description="应用包名")
+) -> Dict[str, Any]:
+    """获取应用详细信息（版本名、版本号、大小、label等）"""
+    try:
+        result = get_app_info(package_name)
+        logger.info(f"获取应用 {package_name} 信息成功")
+        return result
+    except Exception as e:
+        logger.error(f"获取应用信息失败: {str(e)}")
+        return {"error": str(e)}
+
+@mcp.tool("uninstall_app")
+def mcp_uninstall_app(
+    package_name: str = Field(description="应用包名")
+) -> str:
+    """卸载应用"""
+    try:
+        success = uninstall_app(package_name)
+        if success:
+            return f"✅ 已卸载应用: {package_name}"
+        else:
+            return f"❌ 卸载失败: {package_name}"
+    except Exception as e:
+        error_msg = f"❌ 卸载应用失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("list_running_apps")
+def mcp_list_running_apps() -> List[str]:
+    """获取正在运行的应用列表"""
+    try:
+        result = list_running_apps()
+        logger.info(f"获取到 {len(result)} 个运行中的应用")
+        return result
+    except Exception as e:
+        logger.error(f"获取运行应用列表失败: {str(e)}")
+        return []
+
+@mcp.tool("wait_for_activity")
+def mcp_wait_for_activity(
+    activity: str = Field(description="Activity名称"),
+    timeout: float = Field(10.0, description="超时时间（秒），默认10秒")
+) -> bool:
+    """等待指定Activity出现"""
+    try:
+        result = wait_for_activity(activity, timeout)
+        if result:
+            logger.info(f"Activity '{activity}' 已出现")
+        else:
+            logger.warning(f"等待 Activity '{activity}' 超时")
+        return result
+    except Exception as e:
+        logger.error(f"等待Activity失败: {str(e)}")
+        return False
 
 # ==================== UI交互工具 ====================
 
@@ -466,6 +573,219 @@ def mcp_scroll_to_element(
         return f"❌ 参数错误: {str(e)}"
     except Exception as e:
         error_msg = f"❌ 滚动失败: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("press_key")
+def mcp_press_key(
+    key_name: str = Field(description="按键名称: home, back, left, right, up, down, center, menu, search, enter, delete, recent, volume_up, volume_down, volume_mute, camera, power")
+) -> str:
+    """模拟系统按键"""
+    try:
+        success = press_key(key_name)
+        if success:
+            message = f"✅ 按下按键: {key_name}"
+            logger.info(message)
+            return message
+        else:
+            error_msg = f"❌ 按键失败: {key_name}"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 按键异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("unlock_screen")
+def mcp_unlock_screen() -> str:
+    """解锁屏幕"""
+    try:
+        success = unlock_screen()
+        if success:
+            message = "✅ 屏幕已解锁"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 解锁屏幕失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 解锁异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("set_clipboard")
+def mcp_set_clipboard(
+    text: str = Field(description="要设置的剪贴板文本"),
+    label: Optional[str] = Field(None, description="可选的剪贴板标签")
+) -> str:
+    """设置设备剪贴板内容"""
+    try:
+        success = set_clipboard(text, label)
+        if success:
+            message = "✅ 剪贴板已设置"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 设置剪贴板失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 设置剪贴板异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("drag")
+def mcp_drag(
+    start_x: int = Field(description="起始 X 坐标"),
+    start_y: int = Field(description="起始 Y 坐标"),
+    end_x: int = Field(description="结束 X 坐标"),
+    end_y: int = Field(description="结束 Y 坐标"),
+    duration: float = Field(0.5, description="拖拽持续时间（秒），默认0.5秒")
+) -> str:
+    """拖拽（长按并移动到目标位置）"""
+    try:
+        success = drag(start_x, start_y, end_x, end_y, duration)
+        if success:
+            message = f"✅ 拖拽成功: ({start_x},{start_y}) -> ({end_x},{end_y})"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 拖拽失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 拖拽异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+# ==================== 设备管理工具 ====================
+
+@mcp.tool("wakeup")
+def mcp_wakeup() -> str:
+    """唤醒设备（点亮屏幕）"""
+    try:
+        success = wakeup()
+        if success:
+            message = "✅ 设备已唤醒"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 唤醒设备失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 唤醒设备异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("sleep")
+def mcp_device_sleep() -> str:
+    """使设备进入睡眠状态（关闭屏幕）"""
+    try:
+        success = sleep()
+        if success:
+            message = "✅ 设备已进入睡眠"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 设备睡眠失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 设备睡眠异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("open_notification")
+def mcp_open_notification() -> str:
+    """打开通知面板"""
+    try:
+        success = open_notification()
+        if success:
+            message = "✅ 通知面板已打开"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 打开通知面板失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 打开通知面板异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("open_quick_settings")
+def mcp_open_quick_settings() -> str:
+    """打开快捷设置面板"""
+    try:
+        success = open_quick_settings()
+        if success:
+            message = "✅ 快捷设置面板已打开"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 打开快捷设置面板失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 打开快捷设置面板异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("set_orientation")
+def mcp_set_orientation(
+    orientation: str = Field(
+        description="方向: natural, portrait, landscape, reverse_portrait, reverse_landscape"
+    )
+) -> str:
+    """设置屏幕方向"""
+    try:
+        success = set_orientation(orientation)
+        if success:
+            message = f"✅ 屏幕方向已设置为: {orientation}"
+            logger.info(message)
+            return message
+        else:
+            error_msg = f"❌ 设置屏幕方向失败: {orientation}"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 设置屏幕方向异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("freeze_rotation")
+def mcp_freeze_rotation(
+    freeze: bool = Field(description="True 冻结旋转，False 解冻")
+) -> str:
+    """冻结/解冻屏幕旋转"""
+    try:
+        success = freeze_rotation(freeze)
+        if success:
+            action = "冻结" if freeze else "解冻"
+            message = f"✅ 已{action}屏幕旋转"
+            logger.info(message)
+            return message
+        else:
+            error_msg = "❌ 设置屏幕旋转失败"
+            logger.error(error_msg)
+            return error_msg
+    except Exception as e:
+        error_msg = f"❌ 设置屏幕旋转异常: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+@mcp.tool("is_screen_on")
+def mcp_is_screen_on() -> str:
+    """检查屏幕是否点亮"""
+    try:
+        result = is_screen_on()
+        if result is None:
+            return "❌ 无法获取屏幕状态"
+        return "✅ 屏幕已点亮" if result else "❌ 屏幕已熄灭"
+    except Exception as e:
+        error_msg = f"❌ 检查屏幕状态异常: {str(e)}"
         logger.error(error_msg)
         return error_msg
 

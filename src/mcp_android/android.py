@@ -70,6 +70,8 @@ def get_packages() -> str:
     """
     获取所有已安装应用包列表
     
+    使用 uiautomator2 的 app_list() API。
+    
     Returns:
         str: 已安装包列表，每行一个包名
         
@@ -78,10 +80,8 @@ def get_packages() -> str:
     """
     device = get_device()
     try:
-        result = device.shell(["pm", "list", "packages"])
-        if hasattr(result, "output"):
-            return str(result.output).strip()
-        return str(result).strip()
+        packages = device.app_list()
+        return "\n".join(sorted(packages))
     except Exception as e:
         raise RuntimeError(f"获取包列表失败: {str(e)}") from e
 

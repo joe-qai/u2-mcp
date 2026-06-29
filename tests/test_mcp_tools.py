@@ -91,7 +91,7 @@ def test_app_operations():
 
     TEST_APP = None
     for app in TEST_APPS:
-        if f"package:{app}" in packages:
+        if app in packages:
             TEST_APP = app
             break
 

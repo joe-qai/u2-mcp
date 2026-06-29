@@ -13,25 +13,28 @@ from typing import Any, Dict, List, Optional
 from .android import get_device
 
 
+def _get_ui_hierarchy_xml() -> str:
+    """
+    通过 uiautomator2 JSON-RPC API 直接获取UI层次结构 XML。
+    """
+    device = get_device()
+    hierarchy = device.jsonrpc.dumpWindowHierarchy(False, None)
+    if hierarchy:
+        return str(hierarchy)
+    raise RuntimeError("无法获取UI层次结构")
+
+
 def dump_ui_hierarchy() -> str:
     """
     获取当前页面的完整UI层次结构
     
+    使用 uiautomator2 的 dumpWindowHierarchy JSON-RPC API。
+    
     Returns:
         str: UI层次结构XML内容
     """
-    device = get_device()
     try:
-        # 使用UiAutomator dump获取UI层次
-        result = device.shell("uiautomator2 dump /sdcard/ui_hierarchy.xml")
-
-        # 读取dump文件内容
-        output = device.shell("cat /sdcard/ui_hierarchy.xml")
-
-        # 清理临时文件
-        device.shell("rm /sdcard/ui_hierarchy.xml")
-
-        return output.strip() if output else "无法获取UI层次结构"
+        return _get_ui_hierarchy_xml()
     except Exception as e:
         return f"获取UI层次结构失败: {str(e)}"
 
@@ -40,15 +43,13 @@ def get_all_elements() -> List[Dict[str, Any]]:
     """
     获取当前页面的所有元素信息（简化版）
     
+    使用 uiautomator2 的 dumpWindowHierarchy JSON-RPC API。
+    
     Returns:
         List[Dict]: 元素信息列表，包含text、resourceId、className、bounds等
     """
-    device = get_device()
     try:
-        # 获取UI层次结构
-        result = device.shell("uiautomator dump /sdcard/ui_hierarchy.xml")
-        ui_xml = device.shell("cat /sdcard/ui_hierarchy.xml")
-        device.shell("rm /sdcard/ui_hierarchy.xml")
+        ui_xml = _get_ui_hierarchy_xml()
 
         # 解析XML提取元素信息
         elements = []

@@ -331,3 +331,80 @@ def install_apk(apk_path: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def get_app_info(package_name: str) -> Dict[str, Any]:
+    """
+    获取应用详细信息
+    
+    Args:
+        package_name: 应用包名
+        
+    Returns:
+        dict: 包含版本名、版本号、大小、label等信息的字典
+    """
+    try:
+        device = get_device()
+        info = device.app_info(package_name)
+        if info:
+            return {
+                "package_name": package_name,
+                "main_activity": info.get("mainActivity", ""),
+                "label": info.get("label", ""),
+                "version_name": info.get("versionName", ""),
+                "version_code": info.get("versionCode", ""),
+                "size": info.get("size", 0),
+            }
+        return {"error": f"未找到应用: {package_name}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def uninstall_app(package_name: str) -> bool:
+    """
+    卸载应用
+    
+    Args:
+        package_name: 应用包名
+        
+    Returns:
+        bool: 是否卸载成功
+    """
+    try:
+        device = get_device()
+        device.app_uninstall(package_name)
+        return True
+    except Exception:
+        return False
+
+
+def list_running_apps() -> list:
+    """
+    获取正在运行的应用列表
+    
+    Returns:
+        list: 正在运行的应用包名列表
+    """
+    try:
+        device = get_device()
+        return device.app_list_running()
+    except Exception:
+        return []
+
+
+def wait_for_activity(activity: str, timeout: float = 10.0) -> bool:
+    """
+    等待指定Activity出现
+    
+    Args:
+        activity: Activity名称
+        timeout: 超时时间（秒），默认10秒
+        
+    Returns:
+        bool: Activity是否出现
+    """
+    try:
+        device = get_device()
+        return device.wait_activity(activity, timeout=timeout)
+    except Exception:
+        return False
